@@ -2,19 +2,25 @@
 
 <html>
   <head>
+	<!-- First we load the javascript file from Google that allows everything. -->
     <!--Load the AJAX API-->
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
 	
+// Next, we run some commands from the Google javascript file that load other packages.
 // Load the Visualization API and the corechart package.
 google.charts.load('current', {'packages':['corechart']}); 
-// probably should change this to 45 instead of 'current'
+// probably should change this to 45 instead of 'current' so we don't break something in an update.
+
+// And we tell the chart maker where we put all its instructions
 // Set a callback to run when the Google Visualization API is loaded.
 google.charts.setOnLoadCallback(init);
 
 
-
+// This is where all our stuff goes
 function init() {
+
+	// These are options for making the chart look nice.
 	var options = {
 		width: 500,
 		height: 500*.6,
@@ -37,6 +43,8 @@ function init() {
 			fontSize: 20,
 		}
 	};
+	
+	// This is the data table (and I edit the data later)
 	var data = google.visualization.arrayToDataTable([
 		['Candidate','Vote', {role:'style'}],
 		['Clinton', 48.7,'black'],
@@ -47,32 +55,47 @@ function init() {
 		['Cruz',30,'black']
 	])
 
-	var view = new google.visualization.DataView(data);
-      view.setColumns([0, 1,
-                       { calc: "stringify",
-                         sourceColumn: 0,
-                         type: "string",
-                         role: "annotation" },
-                       2]);
+	// Labeling Columns - Kinda weird way to add annotations to data.  I guess the annotations are a layer on top of the data, called a view
+	// https://is.gd/l1ruyl
+	var view = new google.visualization.DataView(data); 
+     view.setColumns([0, 1,
+		{ calc: "stringify",
+		 sourceColumn: 0,
+		 type: "string",
+		 role: "annotation" },
+		2]);
 
+	// Now the topmost layer on top of the view and the data, the chart!
 	var chart = new google.visualization.ColumnChart(
 		document.getElementById('chart_div'));
+		
+	// Add some buttons (for start and stop)
 	var button = document.getElementById('b1');
 	var button2 = document.getElementById('b2');
+	
+	// I added an idea of a state machine, and I have a variable called state.  Initially, we show plurality.
 	var state = 'plurality';
 
+	// I guess there isn't much to this, pretty simple now.  Just a wrapper.  Notice that variables come from the scope where the function is defined.  They aren't passed to the function.  They are inherited from the environment.  Kinda like R.
 	function drawChart() {
 		chart.draw(view, options); 
 	}
 
-
+	// Set the next step timer
+	// 
+	// This handle, b_switcher,  allows us to stop an interval timer... Actually if I were to do this again, I'd just use a timeout instead because ever time one interval is up, I clear it and make a new interval.  I could instead just make a new timeout in one step without clearing the old one and without needing this hande... wait, how does the timeout work? does it pause the code execution?  No, because then we would have different waiting times... but is the program stack getting bigger? Is it recursive?  I don't know.
+	// Oh here's the answer: http://stackoverflow.com/a/24320973
+	// We're good.
 	var b_switcher = setInterval(function() { a_switch_plot(); }, 3000); 
 
+	// this is for later, when we transition between states.  We want the transition to be short when we are in a "starting" state, where we basically just change the title and color.
 	function d_set_switch_speed(e_interval) {
 		clearInterval(b_switcher);
-			b_switcher = setInterval(function() { a_switch_plot(); }, e_interval);
+		b_switcher = setInterval(function() { a_switch_plot(); }, e_interval);
+		options.animation.duration = e_interval/6.0; // need  to animate faster.  otherwise the animation doesn't finish before the next transition starts.  This led to a bug where the color and title wouldn't change when I expected it to.  
 	}
 
+	// this moves the state of the plot forward one step, and google handles the transition mechanics.  All I do is tell it the next endpoint.
 	function a_switch_plot() {  // each state in order, with transition states
 		switch(state)
 		{
@@ -89,7 +112,6 @@ function init() {
 			data.setValue(1, 1, 46.9);
 			data.setValue(2, 1, 21.0);
 			data.setValue(3, 1, 11.8);
-			clearInterval(b_switcher);
 			d_set_switch_speed(3000);
 			break;
 		case 'approval':
@@ -123,12 +145,15 @@ function init() {
 			d_set_switch_speed(3000);
 			break;
 		}
+		// now go draw
 		drawChart();
 	}
 
+	// make the buttons work
 	button.onclick = function() { b_switcher = setInterval(function() { a_switch_plot(); }, 3000); a_switch_plot(); }
 	button2.onclick = function() {clearInterval(b_switcher);}
 
+	// draw the chart once after loading the page
 	drawChart();
 }
 
@@ -136,6 +161,7 @@ function init() {
   </head>
 
   <body>
+	<!-- This is where the actual placement of the chart in the page happens. -->
     <div id="chart_div"></div>
 	<button id='b1'>play</button>
 	<button id='b2'>stop</button>
